@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เกม: ฮีโร่พิทักษ์ห้องคอมฯ (ป.2)</title>
+    <!-- นำเข้า Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- นำเข้าฟอนต์ภาษาไทย -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Prompt', sans-serif; }
+        .btn-press { transition: transform 0.1s, box-shadow 0.1s; }
+        .btn-press:active { transform: translateY(4px); box-shadow: 0 0 0 rgba(0,0,0,0.2) !important; }
+    </style>
+</head>
+<body class="bg-sky-100 min-h-screen flex flex-col items-center justify-center p-4 selection:bg-none select-none">
+
+    <!-- หน้าจอหลักของเกม -->
+    <div id="gameScreen" class="bg-white rounded-3xl shadow-2xl p-6 md:p-8 max-w-2xl w-full text-center border-4 border-sky-400 relative">
+        
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl md:text-3xl font-extrabold text-sky-600 flex items-center gap-2">
+                <span>🦸‍♂️</span> ฮีโร่พิทักษ์ห้องคอมฯ
+            </h1>
+            <div class="text-lg md:text-xl font-bold text-amber-600 bg-amber-100 px-4 py-1.5 rounded-full border-2 border-amber-300">
+                คะแนน: <span id="scoreDisplay">0</span>
+            </div>
+        </div>
+
+        <!-- ตัวบอกข้อ -->
+        <div class="mb-3 text-sky-700 font-bold text-lg" id="questionNumber">ข้อที่ 1 / 10</div>
+        
+        <!-- กล่องคำถาม -->
+        <div class="bg-sky-50 border-3 border-sky-200 rounded-2xl p-6 mb-8 min-h-[140px] flex items-center justify-center shadow-inner">
+            <h2 id="questionText" class="text-2xl md:text-3xl font-bold text-gray-800 leading-snug">
+                โหลดคำถาม...
+            </h2>
+        </div>
+
+        <!-- ปุ่มกดเลือก -->
+        <div class="flex gap-4 md:gap-6 justify-center">
+            <button onclick="handleUserChoice(true)" class="btn-press bg-emerald-500 hover:bg-emerald-600 text-white text-2xl md:text-3xl font-extrabold py-4 px-6 rounded-2xl w-1/2 flex flex-col items-center shadow-[0_6px_0_#059669]">
+                <span class="text-4xl md:text-5xl mb-1">👍</span> ควรทำ
+            </button>
+            <button onclick="handleUserChoice(false)" class="btn-press bg-rose-500 hover:bg-rose-600 text-white text-2xl md:text-3xl font-extrabold py-4 px-6 rounded-2xl w-1/2 flex flex-col items-center shadow-[0_6px_0_#e11d48]">
+                <span class="text-4xl md:text-5xl mb-1">👎</span> ไม่ควรทำ
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal เฉลยคำตอบ (แทนการใช้ alert ธรรมดา) -->
+    <div id="feedbackModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full text-center border-4 shadow-2xl transform transition-all" id="feedbackBox">
+            <div id="feedbackIcon" class="text-6xl md:text-7xl mb-3">✅</div>
+            <h3 id="feedbackTitle" class="text-2xl md:text-3xl font-extrabold mb-3">ตอบถูกครับ!</h3>
+            <p id="feedbackExplain" class="text-lg md:text-xl text-gray-600 font-medium mb-6 leading-relaxed">คำอธิบายเหตุผล</p>
+            <button onclick="nextQuestion()" class="btn-press bg-sky-500 hover:bg-sky-600 text-white text-xl font-bold py-3 px-8 rounded-xl shadow-[0_4px_0_#0284c7] w-full">
+                ข้อต่อไป ➡️
+            </button>
+        </div>
+    </div>
+
+    <!-- หน้าจอสรุปผลเมื่อจบเกม -->
+    <div id="resultScreen" class="hidden bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center border-4 border-amber-400">
+        <h1 class="text-3xl md:text-4xl font-extrabold text-sky-600 mb-2">🎉 จบเกมแล้ว!</h1>
+        <p class="text-gray-500 font-semibold mb-4">มาดูผลคะแนนกันเลย</p>
+        <div id="starsDisplay" class="text-6xl mb-4 animate-bounce">⭐⭐⭐</div>
+        <p class="text-2xl text-gray-700 mb-6 font-bold">
+            คุณได้คะแนน <span id="finalScore" class="text-3xl text-emerald-600">0</span> / <span id="maxScore">10</span>
+        </p>
+        <button onclick="startGame()" class="btn-press bg-emerald-500 hover:bg-emerald-600 text-white text-xl md:text-2xl font-bold py-3.5 px-8 rounded-2xl w-full shadow-[0_5px_0_#059669]">
+            🔄 เล่นใหม่อีกครั้ง
+        </button>
+    </div>
+
+    <script>
+        const originalQuestions = [
+            { text: "กินขนมและน้ำหน้าคอมพิวเตอร์", isGood: false, explain: "น้ำและเศษขนมอาจหกใส่คีย์บอร์ด ทำให้คอมพิวเตอร์พังเสียหายได้นะ" },
+            { text: "รีบแจ้งคุณครูทันที เมื่อคอมพิวเตอร์เปิดไม่ติด", isGood: true, explain: "เยี่ยมมาก! เราไม่ควรแกะซ่อมเองเพราะอาจโดนไฟดูดได้ ต้องให้คุณครูช่วยตรวจสอบ" },
+            { text: "บอกชื่อและที่อยู่บ้านให้คนแปลกหน้าในอินเทอร์เน็ต", isGood: false, explain: "อันตรายมาก! ข้อมูลส่วนตัวต้องเก็บเป็นความลับ ห้ามบอกคนที่ไม่รู้จักเด็ดขาด" },
+            { text: "แบ่งปันให้เพื่อนผลัดกันใช้คอมพิวเตอร์", isGood: true, explain: "เยี่ยมไปเลย! การแบ่งปันและเข้าคิวตามเวลา เป็นมารยาทที่ดีในการใช้ของส่วนรวม" },
+            { text: "เคาะแป้นพิมพ์แรงๆ เวลาเล่นเกม", isGood: false, explain: "การทุบหรือเคาะแป้นพิมพ์แรงๆ จะทำให้ปุ่มหลุดพัง ควรกดเบาๆ มือนะ" },
+            { text: "ปิดเครื่อง (Shut down) ถูกขั้นตอนทุกครั้งหลังใช้งาน", isGood: true, explain: "เก่งมาก! การปิดเครื่องให้ถูกวิธีช่วยถนอมคอมพิวเตอร์ให้อยู่กับเราไปนานๆ" },
+            { text: "ดึงสายไฟหรือปลั๊กคอมพิวเตอร์เล่น", isGood: false, explain: "อันตรายมาก! อาจเกิดไฟฟ้าดูดหรือไฟช็อตได้ ห้ามจับสายไฟเองเด็ดขาด" },
+            { text: "เช็ดมือให้แห้งสนิทก่อนมาใช้งานคอมพิวเตอร์", isGood: true, explain: "ถูกต้อง! มือที่แห้งช่วยป้องกันไฟดูด และน้ำจะไม่หยดลงอุปกรณ์" },
+            { text: "บอกรหัสผ่านคอมพิวเตอร์ให้เพื่อนรู้", isGood: false, explain: "รหัสผ่านเป็นเรื่องส่วนตัว ไม่ควรบอกใครเพื่อความปลอดภัยของข้อมูล" },
+            { text: "เอาดินสอไปขีดเขียนบนหน้าจอเล่น", isGood: false, explain: "หน้าจอเปราะบางมาก การขีดเขียนจะทำให้เป็นรอยและมองภาพไม่ชัด" }
+        ];
+
+        let playQuestions = [];
+        let currentQuestionIndex = 0;
+        let score = 0;
+
+        function startGame() {
+            // สุ่มลำดับคำถามทุกครั้งที่เริ่มเล่นใหม่
+            playQuestions = [...originalQuestions].sort(() => Math.random() - 0.5);
+            currentQuestionIndex = 0;
+            score = 0;
+            
+            document.getElementById('resultScreen').classList.add('hidden');
+            document.getElementById('feedbackModal').classList.add('hidden');
+            document.getElementById('gameScreen').classList.remove('hidden');
+            
+            updateUI();
+        }
+
+        function updateUI() {
+            document.getElementById('scoreDisplay').innerText = score;
+            document.getElementById('questionNumber').innerText = `ข้อที่ ${currentQuestionIndex + 1} / ${playQuestions.length}`;
+            document.getElementById('questionText').innerText = playQuestions[currentQuestionIndex].text;
+        }
+
+        function handleUserChoice(userChoice) {
+            const currentQ = playQuestions[currentQuestionIndex];
+            const modal = document.getElementById('feedbackModal');
+            const box = document.getElementById('feedbackBox');
+            const icon = document.getElementById('feedbackIcon');
+            const title = document.getElementById('feedbackTitle');
+            const explain = document.getElementById('feedbackExplain');
+
+            if (userChoice === currentQ.isGood) {
+                score++;
+                icon.innerText = "🌟 ถูกต้องแล้วครับ!";
+                title.innerText = "เก่งมากเลย!";
+                title.className = "text-2xl md:text-3xl font-extrabold mb-2 text-emerald-600";
+                box.className = "bg-white rounded-3xl p-6 md:p-8 max-w-md w-full text-center border-4 border-emerald-400 shadow-2xl";
+            } else {
+                icon.innerText = "💡 ยังไม่ถูกนะ";
+                title.innerText = "ไม่เป็นไร มาดูเหตุผลกัน";
+                title.className = "text-2xl md:text-3xl font-extrabold mb-2 text-rose-600";
+                box.className = "bg-white rounded-3xl p-6 md:p-8 max-w-md w-full text-center border-4 border-rose-400 shadow-2xl";
+            }
+
+            explain.innerText = currentQ.explain;
+            modal.classList.remove('hidden');
+            document.getElementById('scoreDisplay').innerText = score;
+        }
+
+        function nextQuestion() {
+            document.getElementById('feedbackModal').classList.add('hidden');
+            currentQuestionIndex++;
+
+            if (currentQuestionIndex < playQuestions.length) {
+                updateUI();
+            } else {
+                showResult();
+            }
+        }
+
+        function showResult() {
+            document.getElementById('gameScreen').classList.add('hidden');
+            document.getElementById('resultScreen').classList.remove('hidden');
+            
+            document.getElementById('finalScore').innerText = score;
+            document.getElementById('maxScore').innerText = playQuestions.length;
+
+            let stars = "";
+            if (score === playQuestions.length) stars = "⭐⭐⭐";
+            else if (score >= playQuestions.length * 0.7) stars = "⭐⭐";
+            else if (score >= playQuestions.length * 0.4) stars = "⭐";
+            else stars = "💪 สู้ๆ นะ";
+
+            document.getElementById('starsDisplay').innerText = stars;
+        }
+
+        // เริ่มเกมรอบแรก
+        startGame();
+    </script>
+</body>
+</html>
